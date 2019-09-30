@@ -1,5 +1,0 @@
-import pandas as pd
-import numpy as np
-
-path_to_data = "/home/sayan/Documents/Data Science/DATA1030/project/data"
-df_albums = pd.read_csv(path_to_data.join+"/albums.csv)

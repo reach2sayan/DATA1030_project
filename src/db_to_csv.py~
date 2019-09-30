@@ -1,7 +1,0 @@
-import pandas as pd
-import sqlite3
-
-cnx = sqlite3.connect('./data/billboard-200.db/')
-
-df = pd.read_sql_query("SELECT * from albums", cnx)
-print(df.head())
