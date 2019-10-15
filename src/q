@@ -1,0 +1,49 @@
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+
+path_to_data = "/home/sayan/Documents/Data Science/DATA1030/project/data"
+
+df_albums = pd.read_csv(path_to_data+"/albums.csv")
+df_albums = df_albums.dropna()
+df_albums = df_albums.drop(columns=['id','rank','date'],axis=1)
+
+df_acoustic = pd.read_csv(path_to_data+"/acoustic_features.csv")
+df_acoustic = df_acoustic.dropna()
+df_acoustic = df_acoustic.drop(columns='date',axis=1)
+
+merged_df = pd.merge(df_acoustic,df_albums,on=['album','artist'],how='inner')
+
+merged_df = merged_df.drop_duplicates(subset=None,keep='first',inplace=False)
+
+merged_df = merged_df.drop(columns=['album','song','artist'],inplace=False)
+
+merged_df['billboard'] = [1 for i in range(merged_df.shape[0])]
+merged_df.to_csv(path_to_data+"/data_raw.csv")
+
+
+cont_ftrs = ['track_length','length','key','duration_ms', 'tempo', 'time_signature', 'loudness']
+
+numeric_transformer = Pipeline(steps=[('scaler', StandardScaler())])
+preprocessor = ColumnTransformer(transformers=[('num', numeric_transformer, cont_ftrs)])
+X_prep = preprocessor.fit_transform(merged_df)
+
+feature_names = preprocessor.transformers_[0][-1]
+
+df_pp = pd.DataFrame(data=X_prep,columns=feature_names)
+df_pp['acousticness'] = merged_df['acousticness'].values
+df_pp['speechiness'] = merged_df['speechiness'].values
+df_pp['instrumentalness'] = merged_df['instrumentalness'].values
+df_pp['danceability'] = merged_df['danceability'].values
+df_pp['valence'] = merged_df['valence'].values
+df_pp['liveness'] = merged_df['liveness'].values
+df_pp['loudness'] = merged_df['loudness'].values
+df_pp['mode'] = merged_df['mode'].values
+df_pp['energy'] = merged_df['energy'].values
+df_pp['id'] = merged_df['id'].values
+df_pp['album_id'] = merged_df['album_id'].values
+
+df_pp['billboard'] = [1 for i in range(df_pp.shape[0])]
+df_pp.to_csv(path_to_data+"/data_pp.csv")
