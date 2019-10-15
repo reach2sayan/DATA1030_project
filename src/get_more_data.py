@@ -122,7 +122,7 @@ def get_song_features(new_songs,sp):
 
 path_to_data = "/home/sayan/Documents/Data Science/DATA1030/project/data"
 
-df = pd.read_csv(path_to_data+'/data_raw_1_truncated.csv')
+df = pd.read_csv(path_to_data+'/data_raw_1.csv')
 df.drop(columns='Unnamed: 0',inplace=True)
 
 sp = authorize_client()
