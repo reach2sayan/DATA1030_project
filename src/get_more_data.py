@@ -2,10 +2,39 @@ import pandas as pd
 import numpy as np
 import spotipy
 import spotipy.util as util
+import spotipy.oauth2 as oauth2
 import os
 import json
-import pprint
 
+
+def authorize_client_oauth():
+
+    username = 'reach2sayan'
+    CLIENT_ID = 'a55d8d9617de463cad7abce998314bb3'
+    CLIENT_SECRET = '905ac33d383d47f6aca7cbb3f3c60d49'
+    sp_oauth = oauth2.SpotifyOAuth(client_id=CLIENT_ID,client_secret=CLIENT_SECRET,redirect_uri='http://localhost/')
+    
+    token_info = sp_oauth.get_cached_token() 
+    if not token_info:
+        auth_url = sp_oauth.get_authorize_url()
+        print(auth_url)
+        response = input('Paste the above link into your browser, then paste the redirect url here: ')
+        
+        code = sp_oauth.parse_response_code(response)
+        token_info = sp_oauth.get_access_token(code)
+        
+        token = token_info['access_token']
+
+    sp = spotipy.Spotify(auth=token)
+    return sp
+
+def spotipy_token_refresh():
+    global token_info, sp
+
+    #if sp_oauth.is_token_expired(token_info):
+    token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
+    token = token_info['access_token']
+    sp = spotipy.Spotify(auth=token)
 
 def authorize_client():
     username = 'reach2sayan'
@@ -37,7 +66,7 @@ def get_related_artists(df,sp):
         related_artists.append(sp.artist_related_artists(artist))
 
     ra = []
-    for i in range(len(related_artists)):
+    for i in range(5):
         for j in range(len(related_artists[i].get('artists'))):
             ra.append(related_artists[i].get('artists')[j].get('id'))
 
@@ -47,19 +76,23 @@ def get_top_tracks(related_artists,sp):
     duration_ms = []
     song = []
     album = []
+    date_rel = []
     for artist in related_artists:
         res = sp.artist_top_tracks(artist_id=artist,country='US')
-        for i in range(len(res)):
+        for i in range(len(res['tracks'])):
             duration_ms.append(res.get('tracks')[i].get('duration_ms'))
             song.append(res.get('tracks')[i].get('id'))
             alb = res.get('tracks')[i].get('album')['uri']
+            date_release = res.get('tracks')[i].get('album')['release_date']
             alb = alb.replace('spotify:album:','')
+            date_rel.append(date_release)
             album.append(alb)
 
     new_songs = pd.DataFrame()
     new_songs['id'] = song
     new_songs['album_id'] = album
     new_songs['duration_ms'] = duration_ms
+    new_songs['date'] = date_rel
 
     new_songs = new_songs.drop_duplicates(subset=None,keep='first',inplace=False)
 
@@ -122,23 +155,47 @@ def get_song_features(new_songs,sp):
 
 path_to_data = "/home/sayan/Documents/Data Science/DATA1030/project/data"
 
-df = pd.read_csv(path_to_data+'/data_raw_1.csv')
-df.drop(columns='Unnamed: 0',inplace=True)
+username = 'reach2sayan'
+CLIENT_ID = 'a55d8d9617de463cad7abce998314bb3'
+CLIENT_SECRET = '905ac33d383d47f6aca7cbb3f3c60d49'
+sp_oauth = oauth2.SpotifyOAuth(client_id=CLIENT_ID,client_secret=CLIENT_SECRET,redirect_uri='http://localhost/')
 
-sp = authorize_client()
+token_info = sp_oauth.get_cached_token() 
+if not token_info:
+    auth_url = sp_oauth.get_authorize_url()
+    print(auth_url)
+    response = input('Paste the above link into your browser, then paste the redirect url here: ')
+    
+    code = sp_oauth.parse_response_code(response)
+    token_info = sp_oauth.get_access_token(code)
+    
+    token = token_info['access_token']
+    
+sp = spotipy.Spotify(auth=token)
 
-df['artist_id'] = get_artists(df,sp)
-
-related_artists = get_related_artists(df,sp)
-new_songs = get_top_tracks(related_artists,sp)
-new_songs['length'] = get_album_length(new_songs,sp)
-new_songs = get_song_features(new_songs,sp)
-new_songs['billboard'] = np.nan
-df_big = pd.concat([df,new_songs],axis=0,ignore_index=True)
-df_big = df_big.drop_duplicates('id', keep='first')
-df_big['billboard'].fillna(0,inplace=True)
-
-df_big.to_csv(path_to_data+'/data_raw_big.csv')
-remove_cache()
+for count in range(47,48):
+    print("Working with subset "+str(count))
+    df = pd.read_csv(path_to_data+'/data_raw_'+str(count)+'.csv')
+    #df.drop(columns='Unnamed: 0',inplace=True)
+    
+    #sp = authorize_client()
+    #sp = authorize_client_oauth()
+    df['artist_id'] = get_artists(df,sp)
+    
+    related_artists = get_related_artists(df,sp)
+    new_songs = get_top_tracks(related_artists,sp)
+    new_songs['length'] = get_album_length(new_songs,sp)
+    new_songs = get_song_features(new_songs,sp)
+    new_songs['billboard'] = np.nan
+    df_big = pd.concat([df,new_songs],axis=0,ignore_index=True)
+    df_big = df_big.drop_duplicates('id', keep='first')
+    df_big['billboard'].fillna(0,inplace=True)
+    
+    df_big.to_csv(path_to_data+'/data_raw_big_'+str(count)+'.csv',index=False)
+    print("Token expires at:"+str(token_info['expires_at']))
+    print("Refreshing Token")
+    spotipy_token_refresh()
+    print("Token expires at:"+str(token_info['expires_at']))
+    #remove_cache()
 
 
