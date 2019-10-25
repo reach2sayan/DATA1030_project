@@ -7,3 +7,10 @@
 *~
 *#
 *.jpg
+./figures/pre_Nat_plots
+./figures/selected_EDA
+./report
+*.bbl
+*.blg
+*.toc
+./reports/supplimentary
