@@ -14,3 +14,5 @@
 *.blg
 *.toc
 ./reports/supplimentary
+*.snm
+*.nav
